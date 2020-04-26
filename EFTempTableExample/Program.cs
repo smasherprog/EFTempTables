@@ -12,14 +12,16 @@ namespace EFTempTableExample
             Database.SetInitializer(new DBSeed());
 
             using (var db = new Context())
-            {
+            { 
                 //Select data from a Databsae Table into a temp table,
                 //Then pull the data from the temp table into memory
                 //----QUERY 1----
                 var st = db.Students.Select(a => new TempStudentTableBase
                 {
                     FullName = a.FirstMidName + " " + a.LastName,
-                    ID = a.ID
+                    ID = a.ID,
+                    FirstLetterLastName = a.LastName.Substring(0, 1),
+                    Numbers = a.EnrollmentDate.Month
                 })
                 .ToTempTable<TempStudentTable, TempStudentTableBase>().ToList();
 
@@ -27,7 +29,9 @@ namespace EFTempTableExample
                 var temptable = db.Students.Select(a => new TempStudentTableBase
                 {
                     FullName = a.FirstMidName + " " + a.LastName,
-                    ID = a.ID
+                    ID = a.ID,
+                    FirstLetterLastName = a.LastName.Substring(0, 1),
+                    Numbers = a.EnrollmentDate.Month
                 })
                 .ToTempTable<TempStudentTable, TempStudentTableBase>();
 

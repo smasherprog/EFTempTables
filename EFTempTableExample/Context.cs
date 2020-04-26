@@ -1,6 +1,7 @@
 ﻿using EFTempTable;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity;
 
@@ -50,8 +51,9 @@ namespace EFTempTableExample
     public class TempStudentTableBase
     {
         public int ID { get; set; }
-
+        public string FirstLetterLastName { get; set; }
         public string FullName { get; set; }
+        public decimal Numbers { get; set; }
     }
 
     // TEMP TABLES MUST BE DEFINED LIKE NORMAL EF CLASSES AND ADDED TO THE DbContext as if they were a real table! 
@@ -65,13 +67,10 @@ namespace EFTempTableExample
     {
         public Context() : base("Data Source=localhost;Initial Catalog=EFTempTableExampleDb;Integrated Security=SSPI;")
         {
-
         }
         public DbSet<Student> Students { get; set; }
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<Course> Courses { get; set; }
-
-
 
         public DbSet<TempStudentTable> TempStudentTables { get; set; }
     }
