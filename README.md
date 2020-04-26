@@ -1,7 +1,7 @@
 # EFTempTables
 Entity Framework Temporary Tables
 
-<p>The purpose of this library is to create a small easy to use way to include temp tables into your EF project.</p>
+<p>Supports EF >= 6.1 The purpose of this library is to create a small easy to use way to include temp tables into your EF project.</p>
 <p>Below is a simple example of how you can use this library.</p>
 
 ```c#
