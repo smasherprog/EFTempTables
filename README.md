@@ -5,36 +5,40 @@ Entity Framework Temporary Tables
 <p>Below is a simple example of how you can use this library.</p>
 
 ```c#
-using (var db = new Context())
-{
-  //Select data from a Databsae Table into a temp table,
-  //Then pull the data from the temp table into memory
-  //----QUERY 1----
-  var st = db.Students.Select(a => new TempStudentTableBase
-  {
-    FullName = a.FirstMidName + " " + a.LastName,
-    ID = a.ID
-  })
-  .ToTempTable<TempStudentTable, TempStudentTableBase>().ToList();
 
-  //create a temp table but do not pull the data back into memory. It will be used later
-  //----QUERY 2----
-  var temptable = db.Students.Select(a => new TempStudentTableBase
-  {
-    FullName = a.FirstMidName + " " + a.LastName,
-    ID = a.ID
-  })
-  .ToTempTable<TempStudentTable, TempStudentTableBase>();
+            using (var db = new Context())
+            { 
+                //Select data from a Databsae Table into a temp table,
+                //Then pull the data from the temp table into memory
+                //----QUERY 1----
+                var st = db.Students.Select(a => new TempStudentTableBase
+                {
+                    FullName = a.FirstMidName + " " + a.LastName,
+                    ID = a.ID,
+                    FirstLetterLastName = a.LastName.Substring(0, 1),
+                    Numbers = a.EnrollmentDate.Month
+                })
+                .ToTempTable<TempStudentTable, TempStudentTableBase>().ToList();
 
-  //Use the temp table to join on the Enrollments table, but also join data from the temp table as well
-  var enrolldfg = (from enrol in db.Enrollments
-    join tempb in temptable on enrol.StudentID equals tempb.ID
-    select new
-    {
-      enrol,
-      tempb
-    }).ToList();
-  }     
+                //create a temp table but do not pull the data back into memory. It will be used later
+                var temptable = db.Students.Select(a => new TempStudentTableBase
+                {
+                    FullName = a.FirstMidName + " " + a.LastName,
+                    ID = a.ID,
+                    FirstLetterLastName = a.LastName.Substring(0, 1),
+                    Numbers = a.EnrollmentDate.Month
+                })
+                .ToTempTable<TempStudentTable, TempStudentTableBase>();
+
+                //Use the temp table to join on the Enrollments table, but also join data from the temp table as well
+                var enrollment2 = (from enrol in db.Enrollments
+                                   join tempb in temptable on enrol.StudentID equals tempb.ID
+                                   select new
+                                   {
+                                       enrol,
+                                       tempb
+                                   }).ToList();
+            } 
 ```
 <p>The above code will produce this SQL output</p>
 
