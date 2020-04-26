@@ -4,8 +4,7 @@ using System.Data;
 using System.Data.Entity;
 using System.Data.Entity.Core.Mapping;
 using System.Data.Entity.Core.Metadata.Edm;
-using System.Data.Entity.Core.Objects;
-using System.Data.Entity.Infrastructure;
+using System.Data.Entity.Core.Objects; 
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
@@ -51,7 +50,7 @@ namespace EFTempTable
             }
         }
 
-        public static class SqlHelper
+        private static class SqlHelper
         {
             private static Dictionary<Type, SqlDbType> typeMap;
 
@@ -120,7 +119,7 @@ namespace EFTempTable
             return entityEntitySetMapping.EntityTypeMappings.Single().Fragments.Single().PropertyMappings.OfType<ScalarPropertyMapping>();
         }
 
-        public static IQueryable<TTemporaryEntity> ToScopedTempTable<TTemporaryEntity, INTYPE>(this IQueryable<INTYPE> query) where TTemporaryEntity : TempTableBase where INTYPE : TempTableBase
+        public static IQueryable<TTemporaryEntity> ToTempTable<TTemporaryEntity, INTYPE>(this IQueryable<INTYPE> query) where TTemporaryEntity : TempTableBase where INTYPE : TempTableBase
         {
             var temporarySnapshotObjectQuery = query.GetObjectQuery();
             var temporarySnapshotColumns = temporarySnapshotObjectQuery.GetEntityPropertyMappings<TTemporaryEntity>().ToDictionary(p => p.Property.Name, p => p.Column);

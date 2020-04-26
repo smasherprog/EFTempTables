@@ -63,7 +63,7 @@ namespace EFTempTableExample
 
     public class Context : DbContext
     {
-        public Context() : base("Data Source=(LocalDb)\\MSSQLLocalDB;Initial Catalog=EFTempTableExampleDb;Integrated Security=SSPI;")
+        public Context() : base("Data Source=localhost;Initial Catalog=EFTempTableExampleDb;Integrated Security=SSPI;")
         {
 
         }
