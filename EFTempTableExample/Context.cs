@@ -47,7 +47,7 @@ namespace EFTempTableExample
 
 
     //A Base class is needed for the projection as you cannot project into a table. EF will throw an error
-    public class TempStudentTableBase : TempTableBase
+    public class TempStudentTableBase
     {
         public int ID { get; set; }
 

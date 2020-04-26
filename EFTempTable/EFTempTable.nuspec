@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>EFTempTable</id>
+    <version>1.0.6</version>
+    <title>EFTempTables</title>
+    <authors>Smasherprog</authors>
+    <owners>Smasherprog</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/smasherprog/EFTempTables</projectUrl>
+    <description>Typesafe Library to provide lightweight Temp Tables for EntityFramework</description>
+    <copyright>Copyright 2020</copyright>
+    <tags>EntityFramework Temp Tables</tags> 
+	<dependencies>
+    <group targetFramework=".NETFramework4.5">
+			<dependency id="EntityFramework" version="6.1.0" /> 
+		</group>
+	</dependencies>
+  </metadata>
+</package>

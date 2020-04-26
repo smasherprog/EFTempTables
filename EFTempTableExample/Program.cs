@@ -15,6 +15,7 @@ namespace EFTempTableExample
             {
                 //Select data from a Databsae Table into a temp table,
                 //Then pull the data from the temp table into memory
+                //----QUERY 1----
                 var st = db.Students.Select(a => new TempStudentTableBase
                 {
                     FullName = a.FirstMidName + " " + a.LastName,
@@ -30,17 +31,14 @@ namespace EFTempTableExample
                 })
                 .ToTempTable<TempStudentTable, TempStudentTableBase>();
 
-                //Use the temp table to join on the Enrollments table
-                var enrollmentsbystudent = db.Enrollments.Where(a => temptable.Select(b => b.ID).Contains(a.StudentID)).ToList();
-
                 //Use the temp table to join on the Enrollments table, but also join data from the temp table as well
-                var enrolldfg = (from enrol in db.Enrollments
-                                 join tempb in temptable on enrol.StudentID equals tempb.ID
-                                 select new
-                                 {
-                                     enrol,
-                                     tempb
-                                 }).ToList();
+                var enrollment2 = (from enrol in db.Enrollments
+                                   join tempb in temptable on enrol.StudentID equals tempb.ID
+                                   select new
+                                   {
+                                       enrol,
+                                       tempb
+                                   }).ToList();
             }
         }
     }
