@@ -89,8 +89,8 @@ SELECT
 
 <h3>Setup</h3>
 <p>See the example for the full setup</p>
-<p>Your temporary table must be defined and setup as if it were a real table in sql as far as EF is concerned as Below.</p>
-<p>You must derive your temp tables from EFTempTable.TempTableBase, then create a regular class that holds your data properties, then create the class which EF will use that contains nothing.</p>
+<p>Your temporary table must be defined in c# and setup as if it were a real table in sql as far as EF is concerned as Below.</p>
+<p>You must reate a regular class that holds your data properties, then create the class which EF will use that contains nothing.</p>
 <p>After that, use the temp tables like the examples above. All normal LINQ operations will work on these temp tables!</p>
 
 ```c#
