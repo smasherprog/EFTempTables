@@ -51,7 +51,9 @@ namespace EFTempTableExample
     public class TempStudentTableBase
     {
         public int ID { get; set; }
+        [MaxLength(1)]
         public string FirstLetterLastName { get; set; }
+        [MaxLength(100)]
         public string FullName { get; set; }
         public decimal Numbers { get; set; }
     }
@@ -60,8 +62,6 @@ namespace EFTempTableExample
     //Make sure to name the table with the     HASH 
     [Table("#TempStudentTable")]
     public class TempStudentTable : TempStudentTableBase { }
-
-
 
     public class Context : DbContext
     {
@@ -72,6 +72,6 @@ namespace EFTempTableExample
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<Course> Courses { get; set; }
 
-        public DbSet<TempStudentTable> TempStudentTables { get; set; }
+       public DbSet<TempStudentTable> TempStudentTables { get; set; }
     }
 }

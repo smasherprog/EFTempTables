@@ -4,7 +4,7 @@ using System.Data;
 using System.Data.Entity;
 using System.Data.Entity.Core.Mapping;
 using System.Data.Entity.Core.Metadata.Edm;
-using System.Data.Entity.Core.Objects;
+using System.Data.Entity.Core.Objects; 
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
@@ -31,16 +31,12 @@ namespace EFTempTable
                 temporarySnapshotColumnCreateSqlSuffix += " PRIMARY KEY CLUSTERED";
             }
 
-            if (temporarySnapshotColumn.PrimitiveType.PrimitiveTypeKind == PrimitiveTypeKind.Decimal)
-            {
-                typeNameUpperCase += $"({temporarySnapshotColumn.Precision},{temporarySnapshotColumn.Scale})";
-            }
-
             temporarySnapshotColumnCreateSqlSuffix += ",";
 
             switch (typeNameUpperCase)
             {
                 case "NUMERIC":
+                case "DECIMAL":
                     return string.Format("[{0}] NUMERIC({1},{2}){3}", temporarySnapshotColumn.Name, temporarySnapshotColumn.Precision, temporarySnapshotColumn.Scale, temporarySnapshotColumnCreateSqlSuffix);
                 case "NVARCHAR":
                 case "VARCHAR":
@@ -98,38 +94,84 @@ namespace EFTempTable
             }
         }
 
-        private static IEnumerable<ScalarPropertyMapping> GetEntityPropertyMappings<TEntity>(this ObjectQuery dbContext)
+        private static Dictionary<Type, MappingFragment> TableNameMapping = new Dictionary<Type, MappingFragment>();
+
+        private static MappingFragment GetEntityDescription<TEntity>(ObjectQuery objectContext)
         {
-            // Get the metadata
-            var metadata = dbContext.Context.MetadataWorkspace;
+            var clrEntityType = typeof(TEntity);
+            MappingFragment tablename = null;
+            if (TableNameMapping.TryGetValue(clrEntityType, out tablename))
+            {
+                return tablename;
+            }
 
-            // Get the space within the metadata which contains information about CLR types
-            var clrSpace = (ObjectItemCollection)metadata.GetItemCollection(DataSpace.OSpace);
+            var metadata = objectContext.Context.MetadataWorkspace;
 
-            // Get the entity type from the metadata that maps to the CLR type
-            var entityEntityType = metadata.GetItems<EntityType>(DataSpace.OSpace).Single(e => clrSpace.GetClrType(e) == typeof(TEntity));
+            // Get the part of the model that contains info about the actual CLR types
+            var objectItemCollection = ((ObjectItemCollection)metadata.GetItemCollection(DataSpace.OSpace));
+
+            // Get the entity type from the model that maps to the CLR type
+            var entityType = metadata
+                    .GetItems<EntityType>(DataSpace.OSpace)
+                          .FirstOrDefault(e => objectItemCollection.GetClrType(e) == clrEntityType);
+            if (entityType == null)
+            {
+                return null;
+            }
 
             // Get the entity set that uses this entity type
-            var entityEntitySet = metadata.GetItems<EntityContainer>(DataSpace.CSpace).Single().EntitySets.Single(s => s.ElementType.Name == entityEntityType.Name);
+            var entitySet = metadata
+                .GetItems<EntityContainer>(DataSpace.CSpace)
+                      .Single()
+                      .EntitySets
+                      .Single(s => s.ElementType.Name == entityType.Name);
 
-            // Get the mapping between conceptual and storage model for this entity set
-            var entityEntitySetMapping = metadata.GetItems<EntityContainerMapping>(DataSpace.CSSpace).Single().EntitySetMappings.Single(m => m.EntitySet == entityEntitySet);
+            // Find the mapping between conceptual and storage model for this entity set
+            var mapping = metadata.GetItems<EntityContainerMapping>(DataSpace.CSSpace)
+                .Single()
+                .EntitySetMappings
+                .Single(s => s.EntitySet == entitySet);
 
-            // Get the entity columns
-            return entityEntitySetMapping.EntityTypeMappings.Single().Fragments.Single().PropertyMappings.OfType<ScalarPropertyMapping>();
+            // Find the storage entity set (table) that the entity is mapped
+            var m = mapping
+                .EntityTypeMappings.Single()
+                .Fragments.Single();
+
+            lock (TableNameMapping)
+            {
+                if (TableNameMapping.TryGetValue(clrEntityType, out tablename))
+                {
+                    return tablename;
+                }
+
+                tablename = m;
+                TableNameMapping.Add(clrEntityType, tablename);
+            }
+
+            return tablename;
         }
 
         public static IQueryable<TTemporaryEntity> ToTempTable<TTemporaryEntity, INTYPE>(this IQueryable<INTYPE> query) where TTemporaryEntity : class, INTYPE
         {
-            var temporarySnapshotObjectQuery = query.GetObjectQuery();
-            var temporarySnapshotColumns = temporarySnapshotObjectQuery.GetEntityPropertyMappings<TTemporaryEntity>().ToDictionary(p => p.Property.Name, p => p.Column);
-
-            if ((temporarySnapshotObjectQuery != null) && temporarySnapshotColumns.Any())
+            var temporarySnapshotObjectQuery = query.GetObjectQuery(); 
+            var desc = GetEntityDescription<TTemporaryEntity>(temporarySnapshotObjectQuery);
+            if (desc == null)
             {
-                var temporarySnapshotTableName = "#" + typeof(TTemporaryEntity).Name;
+                throw new ArgumentOutOfRangeException($"The type {typeof(TTemporaryEntity)} is not a part of the dbcontext. Add the code to your context \n  public DbSet<{typeof(TTemporaryEntity).Name}> {typeof(TTemporaryEntity).Name}s {{ get; set; }}\n");
+            }
+
+            var temporarySnapshotColumns = desc.PropertyMappings.OfType<ScalarPropertyMapping>().ToDictionary(p => p.Property.Name, p => p.Column);
+            if ((temporarySnapshotObjectQuery != null) && temporarySnapshotColumns.Any())
+            { 
                 var temporarySnapshotQuerySql = temporarySnapshotObjectQuery.ToTraceString();
                 var temporarySnapshotObjectQueryColumnsPositions = temporarySnapshotObjectQuery.GetQueryPropertyPositions().OrderBy(cp => cp.Value);
-
+                foreach (var item in temporarySnapshotColumns)
+                {
+                    if (temporarySnapshotObjectQueryColumnsPositions.All(a => a.Key != item.Key))
+                    {
+                        throw new ArgumentOutOfRangeException($"You must set a value for the property: {item.Key} in the class {typeof(INTYPE)}. If not value is present, then set it to null. Temp tables require all values to be present");
+                    }
+                }
                 var temporarySnapshotCreateColumnsListBuilder = new StringBuilder();
                 var temporarySnapshotFillColumnsListBuilder = new StringBuilder();
                 foreach (KeyValuePair<string, int> temporarySnapshotObjectQueryColumnPosition in temporarySnapshotObjectQueryColumnsPositions)
@@ -150,8 +192,8 @@ namespace EFTempTable
                     temporarySnapshotFillColumnsListBuilder.Insert(0, "[RESERVED_EF_INTERNAL],");
                 }
 
-                string temporarySnapshotCreateSqlCommand = string.Format("IF OBJECT_ID('tempdb..{0}') IS NOT NULL BEGIN DROP TABLE {0} END{1}CREATE TABLE {0} ({2})", temporarySnapshotTableName, Environment.NewLine, temporarySnapshotCreateColumnsListBuilder);
-                string temporarySnapshotFillSqlCommand = string.Format("INSERT INTO {0}({1}) (SELECT * FROM ({2}) AS [TemporarySnapshotQueryable])", temporarySnapshotTableName, temporarySnapshotFillColumnsListBuilder, temporarySnapshotQuerySql);
+                string temporarySnapshotCreateSqlCommand = string.Format("IF OBJECT_ID('tempdb..{0}') IS NOT NULL BEGIN DROP TABLE {0} END{1}CREATE TABLE {0} ({2})", desc.StoreEntitySet.Table, Environment.NewLine, temporarySnapshotCreateColumnsListBuilder);
+                string temporarySnapshotFillSqlCommand = string.Format("INSERT INTO {0}({1}) (SELECT * FROM ({2}) AS [TemporarySnapshotQueryable])", desc.StoreEntitySet.Table, temporarySnapshotFillColumnsListBuilder, temporarySnapshotQuerySql);
                 var temporarySnapshotFillSqlCommandParameters = new List<SqlParameter>();
                 foreach (var item in temporarySnapshotObjectQuery.Parameters)
                 {
@@ -165,9 +207,7 @@ namespace EFTempTable
                     t.SqlDbType = SqlHelper.GetDbType(item.ParameterType);
                     temporarySnapshotFillSqlCommandParameters.Add(t);
                 }
-
-                // We are opening connection manually here because since Entity Framework 6 it will not be automatically closed until context disposal - this way the temporary table will be visible for other queries.
-
+                 
                 if (temporarySnapshotObjectQuery.Context.Connection.State != ConnectionState.Open)
                 {
                     temporarySnapshotObjectQuery.Context.Connection.Open();
