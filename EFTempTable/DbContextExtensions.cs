@@ -4,7 +4,7 @@ using System.Data;
 using System.Data.Entity;
 using System.Data.Entity.Core.Mapping;
 using System.Data.Entity.Core.Metadata.Edm;
-using System.Data.Entity.Core.Objects; 
+using System.Data.Entity.Core.Objects;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
@@ -19,19 +19,12 @@ namespace EFTempTable
             string temporarySnapshotColumnCreateSqlSuffix = string.Empty;
             if (temporarySnapshotColumn.Nullable)
             {
-                temporarySnapshotColumnCreateSqlSuffix += " NULL";
+                temporarySnapshotColumnCreateSqlSuffix += " NULL,";
             }
             else
             {
-                temporarySnapshotColumnCreateSqlSuffix += " NOT NULL";
+                temporarySnapshotColumnCreateSqlSuffix += " NOT NULL,";
             }
-
-            if (temporarySnapshotColumn.StoreGeneratedPattern == StoreGeneratedPattern.Identity)
-            {
-                temporarySnapshotColumnCreateSqlSuffix += " PRIMARY KEY CLUSTERED";
-            }
-
-            temporarySnapshotColumnCreateSqlSuffix += ",";
 
             switch (typeNameUpperCase)
             {
@@ -100,9 +93,12 @@ namespace EFTempTable
         {
             var clrEntityType = typeof(TEntity);
             MappingFragment tablename = null;
-            if (TableNameMapping.TryGetValue(clrEntityType, out tablename))
+            lock (TableNameMapping)
             {
-                return tablename;
+                if (TableNameMapping.TryGetValue(clrEntityType, out tablename))
+                {
+                    return tablename;
+                }
             }
 
             var metadata = objectContext.Context.MetadataWorkspace;
@@ -153,7 +149,7 @@ namespace EFTempTable
 
         public static IQueryable<TTemporaryEntity> ToTempTable<TTemporaryEntity, INTYPE>(this IQueryable<INTYPE> query) where TTemporaryEntity : class, INTYPE
         {
-            var temporarySnapshotObjectQuery = query.GetObjectQuery(); 
+            var temporarySnapshotObjectQuery = query.GetObjectQuery();
             var desc = GetEntityDescription<TTemporaryEntity>(temporarySnapshotObjectQuery);
             if (desc == null)
             {
@@ -162,7 +158,7 @@ namespace EFTempTable
 
             var temporarySnapshotColumns = desc.PropertyMappings.OfType<ScalarPropertyMapping>().ToDictionary(p => p.Property.Name, p => p.Column);
             if ((temporarySnapshotObjectQuery != null) && temporarySnapshotColumns.Any())
-            { 
+            {
                 var temporarySnapshotQuerySql = temporarySnapshotObjectQuery.ToTraceString();
                 var temporarySnapshotObjectQueryColumnsPositions = temporarySnapshotObjectQuery.GetQueryPropertyPositions().OrderBy(cp => cp.Value);
                 foreach (var item in temporarySnapshotColumns)
@@ -207,7 +203,7 @@ namespace EFTempTable
                     t.SqlDbType = SqlHelper.GetDbType(item.ParameterType);
                     temporarySnapshotFillSqlCommandParameters.Add(t);
                 }
-                 
+
                 if (temporarySnapshotObjectQuery.Context.Connection.State != ConnectionState.Open)
                 {
                     temporarySnapshotObjectQuery.Context.Connection.Open();
