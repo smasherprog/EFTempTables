@@ -8,27 +8,27 @@ Entity Framework Temporary Tables
 
             using (var db = new Context())
             { 
-                //Select data from a Databsae Table into a temp table,
+                 //Select data from a Databsae Table into a temp table,
                 //Then pull the data from the temp table into memory
                 //----QUERY 1----
-                var st = db.Students.Select(a => new TempStudentTableBase
+                var st = db.Students.Select(a => new
                 {
-                    FullName = a.FirstMidName + " " + a.LastName,
-                    ID = a.ID,
+                    FullName = a.FirstMidName + " " + a.LastName, 
+                    a.ID,
                     FirstLetterLastName = a.LastName.Substring(0, 1),
                     Numbers = a.EnrollmentDate.Month
                 })
-                .ToTempTable<TempStudentTable, TempStudentTableBase>().ToList();
+                .ToTempTable<TempStudentTable>();
 
                 //create a temp table but do not pull the data back into memory. It will be used later
-                var temptable = db.Students.Select(a => new TempStudentTableBase
+                var temptable = db.Students.Select(a => new
                 {
                     FullName = a.FirstMidName + " " + a.LastName,
-                    ID = a.ID,
+                    a.ID,
                     FirstLetterLastName = a.LastName.Substring(0, 1),
                     Numbers = a.EnrollmentDate.Month
                 })
-                .ToTempTable<TempStudentTable, TempStudentTableBase>();
+               .ToTempTable<TempStudentTable>().ToEFTable();
 
                 //Use the temp table to join on the Enrollments table, but also join data from the temp table as well
                 var enrollment2 = (from enrol in db.Enrollments
@@ -38,42 +38,64 @@ Entity Framework Temporary Tables
                                        enrol,
                                        tempb
                                    }).ToList();
+
+                //when dispose is called, the temp table will be dropped. Otherwise the temp table will exist until the underlying context is disposed
+                using (var disposeteblewhendone = db.Students.Select(a => new
+                {
+                    FullName = a.FirstMidName + " " + a.LastName,
+                    ID = a.ID,
+                    FirstLetterLastName = a.LastName.Substring(0, 1),
+                    Numbers = a.EnrollmentDate.Month
+                }).ToTempTable<TempStudentTable>())
+                {
+                    var tablelist = disposeteblewhendone.ToEFTable().ToList();
+                }
+
+                //when dispose is called, the temp table will be dropped. Otherwise the temp table will exist until the underlying context is disposed
+                using (var disposeteblewhendone = db.Students.Select(a => new TempStudentTableBase
+                {
+                    FullName = a.FirstMidName + " " + a.LastName,
+                    ID = a.ID,
+                    FirstLetterLastName = a.LastName.Substring(0, 1),
+                    Numbers = a.EnrollmentDate.Month
+                }).ToTempTable<TempStudentTable>())
+                {
+                    //add more data from some other iqueryable
+                    disposeteblewhendone.AppendData(db.Students.Select(a => new
+                    {
+                        FullName = a.FirstMidName + " " + a.LastName,
+                        ID = a.ID,
+                        FirstLetterLastName = a.LastName.Substring(0, 1),
+                        Numbers = a.EnrollmentDate.Month
+                    }));
+                    var tablelist = disposeteblewhendone.ToEFTable().ToList(); 
+                }
             } 
 ```
 <p>The above code will produce this SQL output</p>
 
 ```sql
-----QUERY 1----
 IF OBJECT_ID('tempdb..#TempStudentTable') IS NOT NULL BEGIN DROP TABLE #TempStudentTable END
-CREATE TABLE #TempStudentTable ([ID] INT NOT NULL PRIMARY KEY CLUSTERED,[FullName] NVARCHAR(100) NULL,[FirstLetterLastName] NVARCHAR(1) NULL,[Numbers] DECIMAL(18,2) NOT NULL)
+CREATE TABLE #TempStudentTable ([ID] INT NOT NULL,[FullName] NVARCHAR(100) NULL,[FirstLetterLastName] NVARCHAR(1) NULL,[Numbers] NUMERIC(18,2) NOT NULL)
 
 INSERT INTO #TempStudentTable([ID],[FullName],[FirstLetterLastName],[Numbers]) (SELECT * FROM (SELECT 
     [Extent1].[ID] AS [ID], 
     CASE WHEN ([Extent1].[FirstMidName] IS NULL) THEN N'' ELSE [Extent1].[FirstMidName] END + N' ' + CASE WHEN ([Extent1].[LastName] IS NULL) THEN N'' ELSE [Extent1].[LastName] END AS [C1], 
     SUBSTRING([Extent1].[LastName], 0 + 1, 1) AS [C2], 
-     CAST( DATEPART (month, [Extent1].[EnrollmentDate]) AS decimal(19,0)) AS [C3]
+    DATEPART (month, [Extent1].[EnrollmentDate]) AS [C3]
     FROM [dbo].[Students] AS [Extent1]) AS [TemporarySnapshotQueryable])
-    
-SELECT 
-    [Extent1].[ID] AS [ID], 
-    [Extent1].[FirstLetterLastName] AS [FirstLetterLastName], 
-    [Extent1].[FullName] AS [FullName], 
-    [Extent1].[Numbers] AS [Numbers]
-    FROM [dbo].[#TempStudentTable] AS [Extent1]
-    
-
-----QUERY 2----
-IF OBJECT_ID('tempdb..#TempStudentTable') IS NOT NULL BEGIN DROP TABLE #TempStudentTable END
-CREATE TABLE #TempStudentTable ([ID] INT NOT NULL PRIMARY KEY CLUSTERED,[FullName] NVARCHAR(100) NULL,[FirstLetterLastName] NVARCHAR(1) NULL,[Numbers] DECIMAL(18,2) NOT NULL)
-
-INSERT INTO #TempStudentTable([ID],[FullName],[FirstLetterLastName],[Numbers]) (SELECT * FROM (SELECT 
+ 
+ IF OBJECT_ID('tempdb..#TempStudentTable') IS NOT NULL BEGIN DROP TABLE #TempStudentTable END
+CREATE TABLE #TempStudentTable ([ID] INT NOT NULL,[FullName] NVARCHAR(100) NULL,[FirstLetterLastName] NVARCHAR(1) NULL,[Numbers] NUMERIC(18,2) NOT NULL)
+ 
+ INSERT INTO #TempStudentTable([ID],[FullName],[FirstLetterLastName],[Numbers]) (SELECT * FROM (SELECT 
     [Extent1].[ID] AS [ID], 
     CASE WHEN ([Extent1].[FirstMidName] IS NULL) THEN N'' ELSE [Extent1].[FirstMidName] END + N' ' + CASE WHEN ([Extent1].[LastName] IS NULL) THEN N'' ELSE [Extent1].[LastName] END AS [C1], 
     SUBSTRING([Extent1].[LastName], 0 + 1, 1) AS [C2], 
-     CAST( DATEPART (month, [Extent1].[EnrollmentDate]) AS decimal(19,0)) AS [C3]
+    DATEPART (month, [Extent1].[EnrollmentDate]) AS [C3]
     FROM [dbo].[Students] AS [Extent1]) AS [TemporarySnapshotQueryable])
     
-SELECT 
+ SELECT 
     [Extent1].[EnrollmentID] AS [EnrollmentID], 
     [Extent1].[CourseID] AS [CourseID], 
     [Extent1].[StudentID] AS [StudentID], 
@@ -84,6 +106,51 @@ SELECT
     [Extent2].[Numbers] AS [Numbers]
     FROM  [dbo].[Enrollments] AS [Extent1]
     INNER JOIN [dbo].[#TempStudentTable] AS [Extent2] ON [Extent1].[StudentID] = [Extent2].[ID]
+    
+IF OBJECT_ID('tempdb..#TempStudentTable') IS NOT NULL BEGIN DROP TABLE #TempStudentTable END
+CREATE TABLE #TempStudentTable ([ID] INT NOT NULL,[FullName] NVARCHAR(100) NULL,[FirstLetterLastName] NVARCHAR(1) NULL,[Numbers] NUMERIC(18,2) NOT NULL)
+
+INSERT INTO #TempStudentTable([ID],[FullName],[FirstLetterLastName],[Numbers]) (SELECT * FROM (SELECT 
+    [Extent1].[ID] AS [ID], 
+    CASE WHEN ([Extent1].[FirstMidName] IS NULL) THEN N'' ELSE [Extent1].[FirstMidName] END + N' ' + CASE WHEN ([Extent1].[LastName] IS NULL) THEN N'' ELSE [Extent1].[LastName] END AS [C1], 
+    SUBSTRING([Extent1].[LastName], 0 + 1, 1) AS [C2], 
+    DATEPART (month, [Extent1].[EnrollmentDate]) AS [C3]
+    FROM [dbo].[Students] AS [Extent1]) AS [TemporarySnapshotQueryable])
+    
+ SELECT 
+    [Extent1].[ID] AS [ID], 
+    [Extent1].[FirstLetterLastName] AS [FirstLetterLastName], 
+    [Extent1].[FullName] AS [FullName], 
+    [Extent1].[Numbers] AS [Numbers]
+    FROM [dbo].[#TempStudentTable] AS [Extent1]
+    
+IF OBJECT_ID('tempdb..#TempStudentTable') IS NOT NULL BEGIN DROP TABLE #TempStudentTable END
+
+IF OBJECT_ID('tempdb..#TempStudentTable') IS NOT NULL BEGIN DROP TABLE #TempStudentTable END
+CREATE TABLE #TempStudentTable ([ID] INT NOT NULL,[FullName] NVARCHAR(100) NULL,[FirstLetterLastName] NVARCHAR(1) NULL,[Numbers] NUMERIC(18,2) NOT NULL)
+
+INSERT INTO #TempStudentTable([ID],[FullName],[FirstLetterLastName],[Numbers]) (SELECT * FROM (SELECT 
+    [Extent1].[ID] AS [ID], 
+    CASE WHEN ([Extent1].[FirstMidName] IS NULL) THEN N'' ELSE [Extent1].[FirstMidName] END + N' ' + CASE WHEN ([Extent1].[LastName] IS NULL) THEN N'' ELSE [Extent1].[LastName] END AS [C1], 
+    SUBSTRING([Extent1].[LastName], 0 + 1, 1) AS [C2], 
+     CAST( DATEPART (month, [Extent1].[EnrollmentDate]) AS decimal(19,0)) AS [C3]
+    FROM [dbo].[Students] AS [Extent1]) AS [TemporarySnapshotQueryable])
+    
+INSERT INTO #TempStudentTable([ID],[FullName],[FirstLetterLastName],[Numbers]) (SELECT * FROM (SELECT 
+    [Extent1].[ID] AS [ID], 
+    CASE WHEN ([Extent1].[FirstMidName] IS NULL) THEN N'' ELSE [Extent1].[FirstMidName] END + N' ' + CASE WHEN ([Extent1].[LastName] IS NULL) THEN N'' ELSE [Extent1].[LastName] END AS [C1], 
+    SUBSTRING([Extent1].[LastName], 0 + 1, 1) AS [C2], 
+    DATEPART (month, [Extent1].[EnrollmentDate]) AS [C3]
+    FROM [dbo].[Students] AS [Extent1]) AS [TemporarySnapshotQueryable])
+    
+ SELECT 
+    [Extent1].[ID] AS [ID], 
+    [Extent1].[FirstLetterLastName] AS [FirstLetterLastName], 
+    [Extent1].[FullName] AS [FullName], 
+    [Extent1].[Numbers] AS [Numbers]
+    FROM [dbo].[#TempStudentTable] AS [Extent1]
+    
+IF OBJECT_ID('tempdb..#TempStudentTable') IS NOT NULL BEGIN DROP TABLE #TempStudentTable END
     
 ```
 
@@ -159,6 +226,15 @@ SELECT
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<Course> Courses { get; set; }
 
-        public DbSet<TempStudentTable> TempStudentTables { get; set; }
+        //USE THE BELOW OR YOU CAN USE the line   TempTableExtensions.RegisterTempTables(modelBuilder);
+        ///public DbSet<TempStudentTable> TempStudentTables { get; set; }
+
+        protected override void OnModelCreating(DbModelBuilder modelBuilder)
+        {
+            //use this call or, the above    public DbSet<TempStudentTable> TempStudentTables { get; set; }
+            TempTableExtensions.RegisterTempTables(modelBuilder);
+            base.OnModelCreating(modelBuilder);
+        }
     }
+    
 ```
