@@ -18,8 +18,7 @@ namespace EFTempTableExample
                 //----QUERY 1----
                 var st = db.Students.Select(a => new
                 {
-                    FullName = a.FirstMidName + " " + a.LastName,
-                    a.ID,
+                    FullName = a.FirstMidName + " " + a.LastName, 
                     FirstLetterLastName = a.LastName.Substring(0, 1),
                     Numbers = a.EnrollmentDate.Month
                 })
@@ -57,7 +56,7 @@ namespace EFTempTableExample
                 }
 
                 //when dispose is called, the temp table will be dropped. Otherwise the temp table will exist until the underlying context is disposed
-                using (var disposeteblewhendone = db.Students.Select(a => new
+                using (var disposeteblewhendone = db.Students.Select(a => new TempStudentTableBase
                 {
                     FullName = a.FirstMidName + " " + a.LastName,
                     ID = a.ID,
@@ -73,8 +72,7 @@ namespace EFTempTableExample
                         FirstLetterLastName = a.LastName.Substring(0, 1),
                         Numbers = a.EnrollmentDate.Month
                     }));
-                    var tablelist = disposeteblewhendone.ToEFTable().ToList();
-                    int k = 6;
+                    var tablelist = disposeteblewhendone.ToEFTable().ToList(); 
                 }
             }
         }

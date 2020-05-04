@@ -29,7 +29,7 @@ namespace EFTempTable
 
         public void AppendData(IQueryable query)
         {
-            var temporarySnapshotObjectQuery = query.GetObjectQuery();
+            var temporarySnapshotObjectQuery = query.GetObjectQuery(); 
             this.ObjectContext = temporarySnapshotObjectQuery.Context;
             var desc = GetEntityDescription<T>(temporarySnapshotObjectQuery);
             if (desc == null)
@@ -46,7 +46,7 @@ namespace EFTempTable
                 {
                     if (temporarySnapshotObjectQueryColumnsPositions.All(a => a.Key != item.Key))
                     {
-                        throw new ArgumentOutOfRangeException($"You must set a value for the property: {item.Key} in the class {typeof(T)}. If not value is present, then set it to null. Temp tables require all values to be present");
+                        throw new ArgumentOutOfRangeException($"You must set a value for the property: {item.Key}. If not value is present, then set it to null. Temp tables require all values to be present");
                     }
                 }
                 var temporarySnapshotCreateColumnsListBuilder = new StringBuilder();
