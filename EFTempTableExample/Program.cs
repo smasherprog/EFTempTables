@@ -18,7 +18,8 @@ namespace EFTempTableExample
                 //----QUERY 1----
                 var st = db.Students.Select(a => new
                 {
-                    FullName = a.FirstMidName + " " + a.LastName, 
+                    FullName = a.FirstMidName + " " + a.LastName,
+                    a.ID,
                     FirstLetterLastName = a.LastName.Substring(0, 1),
                     Numbers = a.EnrollmentDate.Month
                 })
@@ -72,7 +73,8 @@ namespace EFTempTableExample
                         FirstLetterLastName = a.LastName.Substring(0, 1),
                         Numbers = a.EnrollmentDate.Month
                     }));
-                    var tablelist = disposeteblewhendone.ToEFTable().ToList(); 
+                    var tablelist = disposeteblewhendone.ToEFTable().ToList();
+                    int k = 6;
                 }
             }
         }

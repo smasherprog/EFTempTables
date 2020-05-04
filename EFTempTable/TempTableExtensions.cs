@@ -6,6 +6,10 @@ namespace EFTempTable
 {
     public static class TempTableExtensions
     {
+        /// <summary>
+        /// Use this function to automagically register all temp tables for the context. This can be used or you can manually add the classes to the dbset on the context.
+        /// </summary>
+        /// <param name="dbModelBuilder"></param>
         public static void RegisterTempTables(DbModelBuilder dbModelBuilder)
         {
             var entityMethod = typeof(DbModelBuilder).GetMethod("Entity");

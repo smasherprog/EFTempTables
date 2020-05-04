@@ -73,8 +73,12 @@ namespace EFTempTableExample
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<Course> Courses { get; set; }
 
+        //USE THE BELOW OR YOU CAN USE the line   TempTableExtensions.RegisterTempTables(modelBuilder);
+        ///public DbSet<TempStudentTable> TempStudentTables { get; set; }
+
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
+            //use this call or, the above    public DbSet<TempStudentTable> TempStudentTables { get; set; }
             TempTableExtensions.RegisterTempTables(modelBuilder);
             base.OnModelCreating(modelBuilder);
         }
