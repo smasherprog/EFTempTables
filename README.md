@@ -14,6 +14,7 @@ Entity Framework Temporary Tables
                 var st = db.Students.Select(a => new
                 {
                     FullName = a.FirstMidName + " " + a.LastName, 
+                    a.ID,
                     FirstLetterLastName = a.LastName.Substring(0, 1),
                     Numbers = a.EnrollmentDate.Month
                 })
