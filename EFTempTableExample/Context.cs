@@ -4,9 +4,22 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity;
+using System.Data.Entity.ModelConfiguration;
 
 namespace EFTempTableExample
 {
+    public class StudentEntityConfiguration : EntityTypeConfiguration<TempStudentTable>
+    {
+        public StudentEntityConfiguration()
+        {
+            this.ToTable("#TempStudentTable");
+            this.HasKey(s => s.ID);
+            this.Property(p => p.FirstLetterLastName) .HasMaxLength(1);
+            this.Property(p => p.FullName).HasMaxLength(100);
+            this.Property(p => p.Numbers);
+        }
+    }
+
     // ---------BEGIN -----------
     //
     //              REGULAR POCO CLASSES BEOW WHICH ARE YOUR NORMAL DATA OBJECT IN THE DATABASE
@@ -72,6 +85,10 @@ namespace EFTempTableExample
         public DbSet<Enrollment> Enrollments { get; set; }
         public DbSet<Course> Courses { get; set; }
 
-       public DbSet<TempStudentTable> TempStudentTables { get; set; }
+        protected override void OnModelCreating(DbModelBuilder modelBuilder)
+        {
+            TempTableExtensions.RegisterTempTables(modelBuilder);
+            base.OnModelCreating(modelBuilder);
+        }
     }
 }
